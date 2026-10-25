@@ -1,0 +1,7 @@
+# Bundle patch: one row whose package name is the plugin id.
+# `@civilization/deepseek-genui` declares `dsh.client` in its manifest, so this
+# row also carries the browser half (the sidebar entry and its main panel).
+- insert:
+    - id: deepseek-genui
+      name: '@civilization/deepseek-genui'
+      config: {}
