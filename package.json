@@ -1,7 +1,7 @@
 {
   "name": "@civilization/deepseek-genui",
-  "version": "1.0.0",
-  "description": "Enterprise-ready GenUI panel bundle for DeepSeek Harness with 7-dimensional component system, offline Mermaid/ReactFlow, and host fault isolation.",
+  "version": "1.0.1",
+  "description": "Enterprise-ready GenUI panel bundle for DeepSeek Harness (DSH 0.2.1-rc.3) with 7-dimensional component system, offline Mermaid/ReactFlow, and host fault isolation.",
   "type": "module",
   "main": "index.js",
   "author": "civilization-os",
