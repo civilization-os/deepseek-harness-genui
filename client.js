@@ -2515,7 +2515,7 @@ window.__ModuleLoader__.load({
     /**
      * Component: DiffViewer (Git-Style Split/Unified Code Difference)
      */
-    function DiffViewer({ title, oldHeader, newHeader, diffText, lines }) {
+    function DiffViewer({ title, oldHeader, newHeader, diffText, lines, oldCode, newCode, filename }) {
       const parsedLines = useMemo(() => {
         if (lines && Array.isArray(lines)) return lines;
         if (diffText && typeof diffText === 'string') {
@@ -2525,13 +2525,21 @@ window.__ModuleLoader__.load({
             return { type: 'same', content: l.startsWith(' ') ? l.slice(1) : l, oldNum: i + 1, newNum: i + 1 };
           });
         }
+        if (typeof oldCode === 'string' || typeof newCode === 'string') {
+          const oldList = (oldCode || '').split('\n');
+          const newList = (newCode || '').split('\n');
+          const res = [];
+          oldList.forEach((l, i) => res.push({ type: 'del', content: l, oldNum: i + 1, newNum: null }));
+          newList.forEach((l, i) => res.push({ type: 'add', content: l, oldNum: null, newNum: i + 1 }));
+          return res;
+        }
         return [
           { type: 'same', content: 'const server = express();', oldNum: 1, newNum: 1 },
           { type: 'del', content: 'server.use(cors({ origin: "*" })); // ⚠️ 存在通配符安全隐患', oldNum: 2, newNum: null },
           { type: 'add', content: 'server.use(cors({ origin: allowedOrigins, credentials: true })); // ✓ 精确放行白名单', oldNum: null, newNum: 2 },
           { type: 'same', content: 'server.listen(port);', oldNum: 3, newNum: 3 },
         ];
-      }, [lines, diffText]);
+      }, [lines, diffText, oldCode, newCode]);
 
       return h('div', { className: 'dgen-diff-card' },
         h('div', { className: 'dgen-node-card-head' },
@@ -3986,6 +3994,9 @@ window.__ModuleLoader__.load({
 
       // --- Dimension 6: Developer UI ---
       diffViewer(props) {
+        return h(DiffViewer, props);
+      },
+      diff(props) {
         return h(DiffViewer, props);
       },
 

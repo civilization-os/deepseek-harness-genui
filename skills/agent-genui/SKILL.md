@@ -1,7 +1,7 @@
 ---
 name: agent-genui
-description: 生成基于 ```agent-genui 协议的高保真、交互式卡片、图表与架构可视化界面组件（GenUI），聊天对话流将自动将其就地渲染为活体卡片。
-whenToUse: 当用户要求生成 GenUI 卡片、交互组件、数据大屏、指标看板、流程图、架构拓扑、时序图、生命周期状态机、交互表单、方案对比或需要以可视化界面呈现分析结果时使用。
+description: 图表可视化与交互组件引擎。生成基于 agent-genui 协议的高保真、交互式卡片、图表与架构可视化界面组件（GenUI），聊天对话流将自动就地渲染。
+whenToUse: 当需要生成数据大屏、指标看板、趋势图表、流程图、架构拓扑、时序图、生命周期状态机、交互表单、方案对比或需要以可视化界面呈现时使用。
 source: bundled
 ---
 
@@ -9,13 +9,13 @@ source: bundled
 
 `@civilization/deepseek-genui` 为 DeepSeek Harness (DSH) 提供了原生的 Generative UI 运行时与聊天流内就地渲染能力。
 
-当你输出被 ````agent-genui` 代码块包裹的标准 JSON DSL 时，DSH 聊天流会自动拦截该代码块并原地渲染为高保真、可交互的活体卡片（支持图表 Tooltip 悬停、React Flow 拓扑拖拽与缩放、表单填写、方案采纳提交等）。
+当你输出被 ```agent-genui 代码块包裹的标准 JSON DSL 时，DSH 聊天流会自动拦截该代码块并原地渲染为高保真、可交互的活体卡片（支持图表 Tooltip 悬停、React Flow 拓扑拖拽与缩放、表单填写、方案采纳提交等）。
 
 ---
 
 ## 📌 输出规范（格式与约束）
 
-在回复用户时，请先输出简明扼要的结论或文字说明，然后**直接输出包裹在 ````agent-genui` 代码块中的完整 JSON 描述**：
+在回复用户时，请先输出简明扼要的结论或文字说明，然后**直接输出包裹在 ```agent-genui 代码块中的完整 JSON 描述**：
 
 ```agent-genui
 {
@@ -237,15 +237,17 @@ source: bundled
 
 ---
 
-### 9. 开发者 UI：代码 Diff 对比（`type: "diff"`）
-支持 Git 级文件修改对比（绿底增加、红底删除）：
+### 9. 开发者 UI：代码 Diff 对比（`type: "diffViewer"` 或 `type: "diff"`）
+支持 Git 级文件修改对比（绿底增加、红底删除），支持传入 `diffText` 或 `oldCode` + `newCode`：
 ```json
 {
   "id": "diff1",
-  "type": "diff",
+  "type": "diffViewer",
   "props": {
     "title": "配置变更审查 (Diff Viewer)",
     "filename": "application-prod.yml",
+    "oldHeader": "原配置 (v1.0)",
+    "newHeader": "新配置 (v1.1)",
     "oldCode": "server:\n  port: 8080\n  timeout: 30s\n  max-connections: 1000",
     "newCode": "server:\n  port: 8080\n  timeout: 60s\n  max-connections: 5000\n  enable-keepalive: true"
   }
@@ -307,6 +309,6 @@ source: bundled
 
 ## 💡 最佳实践
 
-1. **直接输出代码块**：在回答用户时，不需要让用户去哪里搜索或配置，直接给出 ````agent-genui` 代码块即可。DSH 聊天前端已装配自动渲染拦截器，能将此代码块就地变为交互式卡片。
+1. **直接输出代码块**：在回答用户时，不需要让用户去哪里搜索或配置，直接给出 ```agent-genui 代码块即可。DSH 聊天前端已装配自动渲染拦截器，能将此代码块就地变为交互式卡片。
 2. **组合使用**：可以使用 `layout: { "type": "stack", "gap": "md" }` 或 `layout: { "type": "grid", "gap": "md" }` 组合多个不同组件（例如：顶部 1 个 `metric` 指标，中间 1 个 `chart` 图表，底部 1 个 `table` 数据表或 `comparison` 方案对比）。
 3. **保持 JSON 语法严谨**：属性名必须用双引号包裹，字符串内部的引号要转义，避免末尾逗号（trailing comma）。
