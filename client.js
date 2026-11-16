@@ -206,9 +206,14 @@ window.__ModuleLoader__.load({
       '.dgen-code-body{padding:14px;margin:0;background:var(--dsw-alias-bg-layer-1);font-family:ui-monospace,SFMono-Regular,Consolas,Monaco,monospace;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-primary);overflow-x:auto}',
 
       /* Tables */
-      '.dgen-table-wrap{width:100%;overflow-x:auto;border-radius:10px;border:1px solid var(--dsw-alias-border-l4);background:var(--dsw-alias-bg-layer-2)}',
+      
       '.dgen-table{width:100%;border-collapse:collapse;font-size:12px;text-align:left}',
-      '.dgen-table th{background:color-mix(in srgb,var(--dsw-alias-bg-layer-1) 55%,transparent);padding:10px 14px;font-weight:650;color:var(--dsw-alias-label-secondary);cursor:pointer;user-select:none;border-bottom:1px solid var(--dsw-alias-border-l4)}',
+      '.dgen-table-wrap{width:100%;overflow-x:auto;max-height:460px;overflow-y:auto;border-radius:10px;border:1px solid var(--dsw-alias-border-l4);background:var(--dsw-alias-bg-layer-2);position:relative}',
+'.dgen-table th{position:sticky;top:0;z-index:2;background:var(--dsw-alias-bg-layer-2);padding:10px 14px;font-weight:650;color:var(--dsw-alias-label-secondary);cursor:pointer;user-select:none;border-bottom:1px solid var(--dsw-alias-border-l4);box-shadow:0 1px 0 var(--dsw-alias-border-l4)}',
+'.dgen-table-footer{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-top:1px solid var(--dsw-alias-border-l4);background:color-mix(in srgb,var(--dsw-alias-bg-layer-1) 50%,transparent);font-size:11px;color:var(--dsw-alias-label-secondary)}',
+'.dgen-form-error{color:var(--dsw-alias-status-danger,#ef4444);font-size:11px;margin-top:2px;display:flex;align-items:center;gap:4px}',
+'.dgen-task-duration{font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;background:color-mix(in srgb,var(--dsw-alias-label-secondary) 12%,transparent);color:var(--dsw-alias-label-secondary);font-family:ui-monospace,monospace}',
+'.dgen-code-inline{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.9em;padding:1px 5px;border-radius:4px;background:color-mix(in srgb,var(--dsw-alias-brand-primary,#3b82f6) 10%,transparent);color:var(--dsw-alias-brand-primary,#3b82f6);border:1px solid color-mix(in srgb,var(--dsw-alias-brand-primary,#3b82f6) 20%,transparent)}',
       '.dgen-table th:hover{color:var(--dsw-alias-label-primary)}',
       '.dgen-table td{padding:10px 14px;border-bottom:1px solid var(--dsw-alias-border-l4);color:var(--dsw-alias-label-primary)}',
       '.dgen-table tr:last-child td{border-bottom:none}',
@@ -2219,11 +2224,11 @@ window.__ModuleLoader__.load({
     /**
      * Component: HeatmapChart (Full Thermal Matrix with Day/Hour Axes & Tooltip)
      */
-    function HeatmapChart({ title, dataset }) {
+    function HeatmapChart({ title, description, dataset, xLabels, yLabels, summary, context }) {
       const [hoveredCell, setHoveredCell] = useState(null);
 
-      const WEEKDAYS = ['周一 (Mon)', '周二 (Tue)', '周三 (Wed)', '周四 (Thu)', '周五 (Fri)', '周六 (Sat)', '周日 (Sun)'];
-      const TIME_SLOTS = ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'];
+      const WEEKDAYS = yLabels || ['周一 (Mon)', '周二 (Tue)', '周三 (Wed)', '周四 (Thu)', '周五 (Fri)', '周六 (Sat)', '周日 (Sun)'];
+      const TIME_SLOTS = xLabels || ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'];
 
       const MATRIX = dataset || [
         [12,  8,  6, 25, 75, 88, 55, 92, 85, 62, 38, 20],
@@ -2254,11 +2259,23 @@ window.__ModuleLoader__.load({
         };
       };
 
+      const handleCellClick = (ri, ci, val) => {
+        if (context && context.dispatchEvent) {
+          context.dispatchEvent('heatmap_cell_click', {
+            row: ri,
+            col: ci,
+            rowLabel: WEEKDAYS[ri] || `Row_${ri}`,
+            colLabel: TIME_SLOTS[ci] || `Col_${ci}`,
+            value: val
+          }, 'action');
+        }
+      };
+
       return h('div', { className: 'dgen-chart-block' },
         h('div', { className: 'dgen-node-card-head' },
           h('div', null,
-            h('h3', { className: 'dgen-node-title' }, title || '全时段请求热度分布 (24h Traffic Density)'),
-            h('p', { className: 'dgen-node-desc' }, '以周为周期、2 小时为粒度的服务集群 QPS 吞吐热度监控')
+            h('h3', { className: 'dgen-node-title' }, title || '全时段请求热度分布 (Traffic Density)'),
+            h('p', { className: 'dgen-node-desc' }, description || '以时间序列与业务维度矩阵呈现的密度分布')
           ),
           hoveredCell ? h('span', {
             style: {
@@ -2269,7 +2286,7 @@ window.__ModuleLoader__.load({
               background: 'color-mix(in srgb, var(--dsw-alias-brand-primary,#3b82f6) 12%, transparent)',
               color: 'var(--dsw-alias-brand-primary,#3b82f6)'
             }
-          }, WEEKDAYS[hoveredCell.r] + ' ' + TIME_SLOTS[hoveredCell.c] + ' · ' + Math.round(hoveredCell.val * 52) + ' QPS (热度 ' + hoveredCell.val + '%)') : null
+          }, (WEEKDAYS[hoveredCell.r] || '') + ' ' + (TIME_SLOTS[hoveredCell.c] || '') + ' · 值: ' + hoveredCell.val) : null
         ),
         h('div', { className: 'dgen-heatmap-wrap' },
           h('div', { className: 'dgen-heatmap-grid' },
@@ -2279,7 +2296,7 @@ window.__ModuleLoader__.load({
             ),
             MATRIX.map((rowVals, ri) =>
               h(React.Fragment, { key: ri },
-                h('div', { className: 'dgen-heatmap-ylabel' }, WEEKDAYS[ri].slice(0, 2)),
+                h('div', { className: 'dgen-heatmap-ylabel' }, (WEEKDAYS[ri] || '').slice(0, 3)),
                 rowVals.map((val, ci) => {
                   const style = getHeatStyle(val);
                   return h('div', {
@@ -2288,7 +2305,8 @@ window.__ModuleLoader__.load({
                     style,
                     onMouseEnter: () => setHoveredCell({ r: ri, c: ci, val }),
                     onMouseLeave: () => setHoveredCell(null),
-                    title: WEEKDAYS[ri] + ' ' + TIME_SLOTS[ci] + ': 热度 ' + val + '%, QPS: ' + Math.round(val * 52)
+                    onClick: () => handleCellClick(ri, ci, val),
+                    title: (WEEKDAYS[ri] || '') + ' ' + (TIME_SLOTS[ci] || '') + ': ' + val + ' (点击交互)'
                   });
                 })
               )
@@ -2298,17 +2316,16 @@ window.__ModuleLoader__.load({
         h('div', { className: 'dgen-heatmap-legend' },
           h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
             h('span', null, '图例:'),
-            h('span', { style: { color: 'var(--dsw-alias-label-tertiary)' } }, '低负载 (0 QPS)'),
+            h('span', { style: { color: 'var(--dsw-alias-label-tertiary)' } }, '低'),
             h('div', { className: 'dgen-heatmap-ramp' },
               [10, 30, 50, 75, 95].map((level, i) =>
                 h('span', { key: i, className: 'dgen-heatmap-swatch', style: getHeatStyle(level) })
               )
             ),
-            h('span', { style: { color: 'var(--dsw-alias-label-tertiary)' } }, '高负载 (> 5,000 QPS)')
+            h('span', { style: { color: 'var(--dsw-alias-label-tertiary)' } }, '高')
           ),
-          h('div', { style: { display: 'flex', gap: '14px', fontSize: '11px', color: 'var(--dsw-alias-label-secondary)' } },
-            h('span', null, '周总吞吐: 28.4M 请求'),
-            h('span', null, '峰值时段: 周三 14:00 (5,200 QPS)')
+          summary && h('div', { style: { display: 'flex', gap: '14px', fontSize: '11px', color: 'var(--dsw-alias-label-secondary)' } },
+            h('span', null, summary)
           )
         )
       );
@@ -3034,6 +3051,32 @@ window.__ModuleLoader__.load({
     }
 
     /** Component Renderers with DSH Unified UI Variables */
+
+    /** Render simple inline markdown (bold, inline-code) */
+    function renderSimpleInline(text) {
+      if (typeof text !== 'string') return text;
+      const parts = [];
+      const regex = /(\*\*.*?\*\*|`.*?`)/g;
+      let lastIdx = 0;
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        if (match.index > lastIdx) {
+          parts.push(text.slice(lastIdx, match.index));
+        }
+        const m = match[0];
+        if (m.startsWith('**') && m.endsWith('**')) {
+          parts.push(h('strong', { key: 'b_' + match.index, style: { fontWeight: 700, color: 'var(--dsw-alias-label-primary)' } }, m.slice(2, -2)));
+        } else if (m.startsWith('`') && m.endsWith('`')) {
+          parts.push(h('code', { key: 'c_' + match.index, className: 'dgen-code-inline' }, m.slice(1, -1)));
+        }
+        lastIdx = regex.lastIndex;
+      }
+      if (lastIdx < text.length) {
+        parts.push(text.slice(lastIdx));
+      }
+      return parts.length > 0 ? parts : text;
+    }
+
     const Renderers = {
       card(props, context) {
         const items = props.items || props.sections || [];
@@ -3096,11 +3139,16 @@ window.__ModuleLoader__.load({
               )
             ))
           ),
-          props.content && h('div', { style: { marginTop: '8px', fontSize: '13px' } }, props.content)
+          props.content && h('div', { style: { marginTop: '8px', fontSize: '13px', lineHeight: 1.6, color: 'var(--dsw-alias-label-primary)' } }, renderSimpleInline(props.content))
         );
       },
 
       metric(props, context) {
+        const isDown = props.changeType === 'down';
+        // 支持反转语义：如延迟/错误率下降是正向好事
+        const isGood = props.invertColor || props.goodDirection === 'down' ? isDown : !isDown;
+        const trendClass = isGood ? 'dgen-metric-up' : 'dgen-metric-down';
+
         return h('div', { className: 'dgen-metric-tile' },
           props.title && h('span', {
             style: {
@@ -3115,7 +3163,7 @@ window.__ModuleLoader__.load({
           h('div', { className: 'dgen-metric-box' },
             h('span', { className: 'dgen-metric-val' }, props.value ?? '--'),
             props.unit && h('span', { className: 'dgen-metric-unit' }, props.unit),
-            props.change && h('span', { className: `dgen-metric-change dgen-metric-${props.changeType === 'down' ? 'down' : 'up'}` }, props.change)
+            props.change && h('span', { className: `dgen-metric-change ${trendClass}` }, (isDown ? '↓ ' : '↑ ') + props.change)
           ),
           props.description && h('p', { className: 'dgen-node-desc', style: { fontSize: '11px', color: 'var(--dsw-alias-label-tertiary)', margin: '2px 0 0' } }, props.description)
         );
@@ -3152,13 +3200,23 @@ window.__ModuleLoader__.load({
         );
       },
 
-      chart(props) {
+      chart(props, context) {
         const chartType = props.chartType || 'line';
         const series = props.series || [];
+        const unit = props.unit || props.yAxisLabel || '';
+        const xAxisTitle = props.xAxisLabel || props.xLabel || '';
 
-        // 1. Line Chart with Full Cartesian Coordinates (X-axis ticks, labels, grid)
+        // 统一 X 轴刻度防重叠抽样计算：点数过多时等距保留 6~8 个关键刻度
+        const shouldShowXLabel = (idx, total) => {
+          if (total <= 7) return true;
+          if (idx === 0 || idx === total - 1) return true;
+          const step = Math.ceil(total / 6);
+          return idx % step === 0;
+        };
+
+        // 1. Line Chart
         if (chartType === 'line') {
-          const maxVal = Math.max(...series.map((s) => s.value || 0), 100);
+          const maxVal = Math.max(...series.map((s) => s.value || 0), 10);
           const plotW = 280;
           const plotH = 80;
           const leftX = 45;
@@ -3166,20 +3224,21 @@ window.__ModuleLoader__.load({
 
           const pts = series.map((s, idx) => {
             const x = leftX + (idx / Math.max(series.length - 1, 1)) * plotW;
-            const y = baseY - (s.value / maxVal) * plotH;
+            const y = baseY - ((s.value || 0) / maxVal) * plotH;
             return `${x},${y}`;
           }).join(' ');
 
           return h('div', { className: 'dgen-chart-block' },
             props.title && h('h3', { className: 'dgen-node-title' }, props.title),
-            h('svg', { viewBox: '0 0 350 135', style: { width: '100%', height: '150px', marginTop: '6px' } },
+            props.description && h('p', { className: 'dgen-node-desc', style: { margin: '0 0 6px' } }, props.description),
+            h('svg', { viewBox: '0 0 350 140', style: { width: '100%', height: '155px', marginTop: '6px' } },
               // Grid lines & Y scale
               [0, 0.33, 0.66, 1].map((ratio, i) => {
                 const y = baseY - ratio * plotH;
                 const val = Math.round(ratio * maxVal);
                 return h('g', { key: i },
                   h('line', { x1: leftX, y1: y, x2: leftX + plotW, y2: y, stroke: 'var(--dsw-alias-border-l4)', strokeDasharray: i === 0 ? 'none' : '3 3', strokeWidth: 1 }),
-                  h('text', { x: leftX - 6, y: y + 3, textAnchor: 'end', fontSize: 9, fill: 'var(--dsw-alias-label-tertiary)' }, val)
+                  h('text', { x: leftX - 6, y: y + 3, textAnchor: 'end', fontSize: 9, fill: 'var(--dsw-alias-label-tertiary)' }, val + (i === 3 && unit ? unit : ''))
                 );
               }),
               // Axes
@@ -3193,146 +3252,229 @@ window.__ModuleLoader__.load({
                 strokeLinecap: 'round',
                 points: pts,
               }),
-              // Points & X Labels
+              // Points & X Labels (抽样防重叠 + 原生 title 悬浮浮层)
               series.map((s, idx) => {
                 const cx = leftX + (idx / Math.max(series.length - 1, 1)) * plotW;
-                const cy = baseY - (s.value / maxVal) * plotH;
+                const cy = baseY - ((s.value || 0) / maxVal) * plotH;
+                const showLabel = shouldShowXLabel(idx, series.length);
                 return h('g', { key: idx },
-                  h('circle', { cx, cy, r: 3.5, fill: 'var(--dsw-alias-brand-primary,#3b82f6)', stroke: 'var(--dsw-alias-bg-layer-2)', strokeWidth: 1.5 }),
-                  h('line', { x1: cx, y1: baseY, x2: cx, y2: baseY + 4, stroke: 'var(--dsw-alias-border-l4)' }),
-                  h('text', { x: cx, y: baseY + 16, textAnchor: 'middle', fill: 'var(--dsw-alias-label-secondary)', fontSize: 9, fontWeight: 500 }, s.label)
+                  h('circle', {
+                    cx,
+                    cy,
+                    r: 3.8,
+                    fill: 'var(--dsw-alias-brand-primary,#3b82f6)',
+                    stroke: 'var(--dsw-alias-bg-layer-2)',
+                    strokeWidth: 1.5,
+                    style: { cursor: 'pointer' }
+                  },
+                    h('title', null, `${s.label}: ${s.value}${unit}`)
+                  ),
+                  showLabel && h('g', null,
+                    h('line', { x1: cx, y1: baseY, x2: cx, y2: baseY + 4, stroke: 'var(--dsw-alias-border-l4)' }),
+                    h('text', { x: cx, y: baseY + 16, textAnchor: 'middle', fill: 'var(--dsw-alias-label-secondary)', fontSize: 9, fontWeight: 500 }, s.label)
+                  )
                 );
               }),
-              h('text', { x: leftX + plotW, y: baseY + 28, textAnchor: 'end', fontSize: 9, fill: 'var(--dsw-alias-label-tertiary)' }, '横坐标: 采样时段 (24h)')
+              xAxisTitle && h('text', { x: leftX + plotW, y: baseY + 28, textAnchor: 'end', fontSize: 9, fill: 'var(--dsw-alias-label-tertiary)' }, xAxisTitle)
             )
           );
         }
 
-        // 2. Area Chart with Full Cartesian Coordinates (X-axis labels, fill gradient)
+        // 2. Area Chart
         if (chartType === 'area') {
-          const maxVal = Math.max(...series.map((s) => s.value || 0), 100);
+          const maxVal = Math.max(...series.map((s) => s.value || 0), 10);
           const plotW = 280;
           const plotH = 80;
           const leftX = 45;
           const baseY = 100;
+          const gradId = 'dgen_area_grad_' + Math.abs(Math.random() * 100000 | 0);
 
           const linePts = series.map((s, idx) => {
             const x = leftX + (idx / Math.max(series.length - 1, 1)) * plotW;
-            const y = baseY - (s.value / maxVal) * plotH;
+            const y = baseY - ((s.value || 0) / maxVal) * plotH;
             return `${x},${y}`;
           });
           const polyPts = `${leftX},${baseY} ${linePts.join(' ')} ${leftX + plotW},${baseY}`;
 
           return h('div', { className: 'dgen-chart-block' },
             props.title && h('h3', { className: 'dgen-node-title' }, props.title),
-            h('svg', { viewBox: '0 0 350 135', style: { width: '100%', height: '150px', marginTop: '6px' } },
+            props.description && h('p', { className: 'dgen-node-desc', style: { margin: '0 0 6px' } }, props.description),
+            h('svg', { viewBox: '0 0 350 140', style: { width: '100%', height: '155px', marginTop: '6px' } },
+              h('defs', null,
+                h('linearGradient', { id: gradId, x1: '0', y1: '0', x2: '0', y2: '1' },
+                  h('stop', { offset: '0%', stopColor: 'var(--dsw-alias-brand-primary,#3b82f6)', stopOpacity: 0.4 }),
+                  h('stop', { offset: '100%', stopColor: 'var(--dsw-alias-brand-primary,#3b82f6)', stopOpacity: 0.02 })
+                )
+              ),
               [0, 0.33, 0.66, 1].map((ratio, i) => {
                 const y = baseY - ratio * plotH;
                 const val = Math.round(ratio * maxVal);
                 return h('g', { key: i },
                   h('line', { x1: leftX, y1: y, x2: leftX + plotW, y2: y, stroke: 'var(--dsw-alias-border-l4)', strokeDasharray: i === 0 ? 'none' : '3 3', strokeWidth: 1 }),
-                  h('text', { x: leftX - 6, y: y + 3, textAnchor: 'end', fontSize: 9, fill: 'var(--dsw-alias-label-tertiary)' }, val + 'G')
+                  h('text', { x: leftX - 6, y: y + 3, textAnchor: 'end', fontSize: 9, fill: 'var(--dsw-alias-label-tertiary)' }, val + (i === 3 && unit ? unit : ''))
                 );
               }),
               h('line', { x1: leftX, y1: baseY - plotH - 5, x2: leftX, y2: baseY, stroke: 'var(--dsw-alias-border-l4)', strokeWidth: 1.2 }),
               h('line', { x1: leftX, y1: baseY, x2: leftX + plotW + 10, y2: baseY, stroke: 'var(--dsw-alias-border-l4)', strokeWidth: 1.2 }),
-              h('polygon', { fill: 'color-mix(in srgb, var(--dsw-alias-brand-primary, #3b82f6) 18%, transparent)', points: polyPts }),
-              h('polyline', { fill: 'none', stroke: 'var(--dsw-alias-brand-primary,#3b82f6)', strokeWidth: '2.5', points: linePts.join(' ') }),
+              h('polygon', { fill: `url(#${gradId})`, points: polyPts }),
+              h('polyline', {
+                fill: 'none',
+                stroke: 'var(--dsw-alias-brand-primary,#3b82f6)',
+                strokeWidth: '2.2',
+                strokeLinecap: 'round',
+                points: linePts.join(' '),
+              }),
               series.map((s, idx) => {
                 const cx = leftX + (idx / Math.max(series.length - 1, 1)) * plotW;
+                const cy = baseY - ((s.value || 0) / maxVal) * plotH;
+                const showLabel = shouldShowXLabel(idx, series.length);
                 return h('g', { key: idx },
-                  h('line', { x1: cx, y1: baseY, x2: cx, y2: baseY + 4, stroke: 'var(--dsw-alias-border-l4)' }),
-                  h('text', { x: cx, y: baseY + 16, textAnchor: 'middle', fill: 'var(--dsw-alias-label-secondary)', fontSize: 9, fontWeight: 500 }, s.label)
+                  h('circle', {
+                    cx,
+                    cy,
+                    r: 3.5,
+                    fill: 'var(--dsw-alias-brand-primary,#3b82f6)',
+                    stroke: 'var(--dsw-alias-bg-layer-2)',
+                    strokeWidth: 1.5,
+                    style: { cursor: 'pointer' }
+                  },
+                    h('title', null, `${s.label}: ${s.value}${unit}`)
+                  ),
+                  showLabel && h('g', null,
+                    h('line', { x1: cx, y1: baseY, x2: cx, y2: baseY + 4, stroke: 'var(--dsw-alias-border-l4)' }),
+                    h('text', { x: cx, y: baseY + 16, textAnchor: 'middle', fill: 'var(--dsw-alias-label-secondary)', fontSize: 9, fontWeight: 500 }, s.label)
+                  )
                 );
               }),
-              h('text', { x: leftX + plotW, y: baseY + 28, textAnchor: 'end', fontSize: 9, fill: 'var(--dsw-alias-label-tertiary)' }, '横坐标: 监控时间')
+              xAxisTitle && h('text', { x: leftX + plotW, y: baseY + 28, textAnchor: 'end', fontSize: 9, fill: 'var(--dsw-alias-label-tertiary)' }, xAxisTitle)
             )
           );
         }
 
-        // 3. Bar Chart with Vertical Bars & Clear Horizontal X-Axis
+        // 3. Bar Chart
         if (chartType === 'bar') {
-          const maxVal = Math.max(...series.map((s) => s.value || 0), 100);
+          const maxVal = Math.max(...series.map((s) => s.value || 0), 10);
           const plotW = 280;
           const plotH = 80;
           const leftX = 45;
           const baseY = 100;
-          const colCount = series.length || 1;
-          const slotW = plotW / colCount;
-          const barW = Math.min(slotW * 0.55, 34);
+          const barW = Math.max(Math.min(plotW / (series.length || 1) - 8, 28), 6);
 
           return h('div', { className: 'dgen-chart-block' },
             props.title && h('h3', { className: 'dgen-node-title' }, props.title),
-            h('svg', { viewBox: '0 0 350 145', style: { width: '100%', height: '160px', marginTop: '6px' } },
-              [0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+            props.description && h('p', { className: 'dgen-node-desc', style: { margin: '0 0 6px' } }, props.description),
+            h('svg', { viewBox: '0 0 350 140', style: { width: '100%', height: '155px', marginTop: '6px' } },
+              [0, 0.33, 0.66, 1].map((ratio, i) => {
                 const y = baseY - ratio * plotH;
                 const val = Math.round(ratio * maxVal);
                 return h('g', { key: i },
                   h('line', { x1: leftX, y1: y, x2: leftX + plotW, y2: y, stroke: 'var(--dsw-alias-border-l4)', strokeDasharray: i === 0 ? 'none' : '3 3', strokeWidth: 1 }),
-                  h('text', { x: leftX - 6, y: y + 3, textAnchor: 'end', fontSize: 9, fill: 'var(--dsw-alias-label-tertiary)' }, val + '%')
+                  h('text', { x: leftX - 6, y: y + 3, textAnchor: 'end', fontSize: 9, fill: 'var(--dsw-alias-label-tertiary)' }, val + (i === 3 && unit ? unit : ''))
                 );
               }),
               h('line', { x1: leftX, y1: baseY - plotH - 5, x2: leftX, y2: baseY, stroke: 'var(--dsw-alias-border-l4)', strokeWidth: 1.2 }),
               h('line', { x1: leftX, y1: baseY, x2: leftX + plotW + 10, y2: baseY, stroke: 'var(--dsw-alias-border-l4)', strokeWidth: 1.2 }),
-              series.map((s, i) => {
-                const cx = leftX + i * slotW + slotW / 2;
-                const hVal = (s.value / maxVal) * plotH;
-                const bx = cx - barW / 2;
-                const by = baseY - hVal;
-                return h('g', { key: i },
-                  h('text', { x: cx, y: by - 4, textAnchor: 'middle', fontSize: 9, fontWeight: 600, fill: 'var(--dsw-alias-label-primary)' }, s.value + '%'),
+              series.map((s, idx) => {
+                const slotW = plotW / (series.length || 1);
+                const x = leftX + idx * slotW + (slotW - barW) / 2;
+                const hVal = Math.max(((s.value || 0) / maxVal) * plotH, 2);
+                const y = baseY - hVal;
+                const showLabel = shouldShowXLabel(idx, series.length);
+                return h('g', { key: idx },
                   h('rect', {
-                    x: bx,
-                    y: by,
+                    x,
+                    y,
                     width: barW,
-                    height: Math.max(hVal, 2),
+                    height: hVal,
                     rx: 3,
-                    fill: 'var(--dsw-alias-brand-primary,#3b82f6)',
-                  }),
-                  h('line', { x1: cx, y1: baseY, x2: cx, y2: baseY + 4, stroke: 'var(--dsw-alias-border-l4)' }),
-                  h('text', { x: cx, y: baseY + 16, textAnchor: 'middle', fontSize: 9, fontWeight: 500, fill: 'var(--dsw-alias-label-secondary)' }, s.label)
+                    fill: s.color || 'var(--dsw-alias-brand-primary,#3b82f6)',
+                    style: { cursor: 'pointer', transition: 'opacity .15s' }
+                  },
+                    h('title', null, `${s.label}: ${s.value}${unit}`)
+                  ),
+                  showLabel && h('text', {
+                    x: x + barW / 2,
+                    y: baseY + 16,
+                    textAnchor: 'middle',
+                    fill: 'var(--dsw-alias-label-secondary)',
+                    fontSize: 9,
+                    fontWeight: 500
+                  }, s.label)
                 );
               }),
-              h('text', { x: leftX + plotW, y: baseY + 32, textAnchor: 'end', fontSize: 9, fill: 'var(--dsw-alias-label-tertiary)' }, '横坐标: 集群业务模块')
+              xAxisTitle && h('text', { x: leftX + plotW, y: baseY + 28, textAnchor: 'end', fontSize: 9, fill: 'var(--dsw-alias-label-tertiary)' }, xAxisTitle)
             )
           );
         }
 
-        // 4. Donut / Pie Chart
+        // 4. Donut / Pie Chart (12 色调色板)
         if (chartType === 'donut' || chartType === 'pie') {
-          const total = series.reduce((acc, s) => acc + (s.value || 0), 0) || 1;
-          const colors = ['#3b82f6', '#38a169', '#d69e2e', '#8b5cf6', '#e53e3e'];
-          let cumulativeAngle = 0;
+          const colors = [
+            '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+            '#06b6d4', '#ec4899', '#6366f1', '#14b8a6', '#f97316',
+            '#84cc16', '#a855f7'
+          ];
+          const total = series.reduce((acc, cur) => acc + (cur.value || 0), 0) || 1;
+          const strokeW = chartType === 'donut' ? 14 : 32;
+          const radius = 32;
+          const circumference = 2 * Math.PI * radius;
+
+          let accumulatedPercent = 0;
+          const slices = series.map((s, i) => {
+            const pct = (s.value || 0) / total;
+            const strokeDasharray = `${pct * circumference} ${circumference}`;
+            const strokeDashoffset = -accumulatedPercent * circumference;
+            accumulatedPercent += pct;
+            return { ...s, color: s.color || colors[i % colors.length], strokeDasharray, strokeDashoffset, pct };
+          });
 
           return h('div', { className: 'dgen-chart-block' },
             props.title && h('h3', { className: 'dgen-node-title' }, props.title),
-            h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '28px', marginTop: '12px' } },
-              h('svg', { viewBox: '0 0 100 100', width: 110, height: 110 },
-                series.map((s, i) => {
-                  const percent = (s.value || 0) / total;
-                  const strokeDasharray = `${percent * 251.2} 251.2`;
-                  const strokeDashoffset = -cumulativeAngle * 251.2;
-                  cumulativeAngle += percent;
-                  return h('circle', {
-                    key: i,
-                    cx: 50,
-                    cy: 50,
-                    r: 40,
-                    fill: 'transparent',
-                    stroke: colors[i % colors.length],
-                    strokeWidth: 16,
-                    strokeDasharray,
-                    strokeDashoffset,
-                    transform: 'rotate(-90 50 50)',
-                  });
-                }),
-                h('text', { x: 50, y: 54, textAnchor: 'middle', fontSize: 13, fontWeight: 700, fill: 'var(--dsw-alias-label-primary)' }, `${series[0]?.value || 0}%`)
+            props.description && h('p', { className: 'dgen-node-desc', style: { margin: '0 0 6px' } }, props.description),
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap', marginTop: '8px' } },
+              h('div', { style: { position: 'relative', width: '120px', height: '120px', flexShrink: 0 } },
+                h('svg', { viewBox: '0 0 100 100', width: 120, height: 120, style: { transform: 'rotate(-90deg)' } },
+                  h('circle', { cx: 50, cy: 50, r: radius, fill: 'none', stroke: 'var(--dsw-alias-border-l4)', strokeWidth: strokeW }),
+                  slices.map((sl, i) =>
+                    h('circle', {
+                      key: i,
+                      cx: 50,
+                      cy: 50,
+                      r: radius,
+                      fill: 'none',
+                      stroke: sl.color,
+                      strokeWidth: strokeW,
+                      strokeDasharray: sl.strokeDasharray,
+                      strokeDashoffset: sl.strokeDashoffset,
+                      style: { transition: 'stroke-dasharray .3s ease' }
+                    },
+                      h('title', null, `${sl.label}: ${sl.value} (${Math.round(sl.pct * 100)}%)`)
+                    )
+                  )
+                ),
+                chartType === 'donut' && h('div', {
+                  style: {
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: 'none'
+                  }
+                },
+                  h('span', { style: { fontSize: '11px', color: 'var(--dsw-alias-label-secondary)' } }, props.centerLabel || '总计'),
+                  h('span', { style: { fontSize: '14px', fontWeight: 700, color: 'var(--dsw-alias-label-primary)' } }, props.centerValue || total)
+                )
               ),
-              h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px' } },
+              h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px', flex: 1, minWidth: '130px' } },
                 series.map((s, i) =>
-                  h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                    h('span', { style: { width: '8px', height: '8px', borderRadius: '2px', background: colors[i % colors.length] } }),
-                    h('span', { style: { color: 'var(--dsw-alias-label-secondary)' } }, `${s.label} (${Math.round(((s.value || 0) / total) * 100)}%)`)
+                  h('div', { key: i, style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' } },
+                    h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+                      h('span', { style: { width: '8px', height: '8px', borderRadius: '2px', background: s.color || colors[i % colors.length] } }),
+                      h('span', { style: { color: 'var(--dsw-alias-label-secondary)' } }, s.label)
+                    ),
+                    h('span', { style: { fontWeight: 600, color: 'var(--dsw-alias-label-primary)', fontVariantNumeric: 'tabular-nums' } }, `${s.value}${unit} (${Math.round(((s.value || 0) / total) * 100)}%)`)
                   )
                 )
               )
@@ -3340,31 +3482,36 @@ window.__ModuleLoader__.load({
           );
         }
 
-        // 5. Gauge Chart
+        // 5. Gauge Chart (带有平滑过渡)
         if (chartType === 'gauge') {
           const val = props.value || 0;
-          const pct = Math.min(Math.max(val, 0), 100);
+          const maxVal = props.max || 100;
+          const pct = Math.min(Math.max((val / maxVal) * 100, 0), 100);
 
           return h('div', { className: 'dgen-chart-block', style: { alignItems: 'center', textAlign: 'center' } },
             props.title && h('h3', { className: 'dgen-node-title' }, props.title),
+            props.description && h('p', { className: 'dgen-node-desc', style: { margin: '0 0 6px' } }, props.description),
             h('svg', { viewBox: '0 0 140 85', width: 160, height: 95, style: { marginTop: '8px' } },
               h('path', { d: 'M 15 75 A 55 55 0 0 1 125 75', fill: 'none', stroke: 'color-mix(in srgb, var(--dsw-alias-border-l4) 50%, transparent)', strokeWidth: 12, strokeLinecap: 'round' }),
               h('path', {
                 d: 'M 15 75 A 55 55 0 0 1 125 75',
                 fill: 'none',
-                stroke: pct > 90 ? '#38a169' : pct > 70 ? '#d69e2e' : '#e53e3e',
+                stroke: pct > 85 ? '#38a169' : pct > 60 ? 'var(--dsw-alias-brand-primary,#3b82f6)' : (pct > 30 ? '#d69e2e' : '#e53e3e'),
                 strokeWidth: 12,
                 strokeLinecap: 'round',
                 strokeDasharray: '172.78',
                 strokeDashoffset: 172.78 * (1 - pct / 100),
-              }),
-              h('text', { x: 70, y: 72, textAnchor: 'middle', fontSize: 22, fontWeight: 700, fill: 'var(--dsw-alias-label-primary)' }, `${val}${props.unit || ''}`)
+                style: { transition: 'stroke-dashoffset 0.4s ease' }
+              },
+                h('title', null, `当前值: ${val}/${maxVal} (${Math.round(pct)}%)`)
+              ),
+              h('text', { x: 70, y: 72, textAnchor: 'middle', fontSize: 22, fontWeight: 700, fill: 'var(--dsw-alias-label-primary)' }, `${val}${unit}`)
             ),
-            h('span', { style: { fontSize: '11px', color: 'var(--dsw-alias-label-secondary)' } }, `目标基线: ${props.target || 99.9}%`)
+            props.target && h('span', { style: { fontSize: '11px', color: 'var(--dsw-alias-label-secondary)' } }, `目标基线: ${props.target}${unit}`)
           );
         }
 
-        // 6. Scatter Plot with Full Cartesian Coordinates (X-axis ticks: 0, 1000, 2000, 3000, 4000)
+        // 6. Scatter Plot (自适应 X/Y 轴坐标)
         if (chartType === 'scatter') {
           const pts = props.points || [];
           const leftX = 45;
@@ -3372,49 +3519,62 @@ window.__ModuleLoader__.load({
           const plotW = 280;
           const plotH = 80;
 
+          const maxX = Math.max(...pts.map((p) => p.x || 0), 100);
+          const maxY = Math.max(...pts.map((p) => p.y || 0), 50);
+
           return h('div', { className: 'dgen-chart-block' },
             props.title && h('h3', { className: 'dgen-node-title' }, props.title),
+            props.description && h('p', { className: 'dgen-node-desc', style: { margin: '0 0 6px' } }, props.description),
             h('svg', { viewBox: '0 0 350 145', style: { width: '100%', height: '160px', marginTop: '6px' } },
               [0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
                 const y = baseY - ratio * plotH;
-                const val = Math.round(ratio * 160);
+                const val = Math.round(ratio * maxY);
                 return h('g', { key: i },
                   h('line', { x1: leftX, y1: y, x2: leftX + plotW, y2: y, stroke: 'var(--dsw-alias-border-l4)', strokeDasharray: i === 0 ? 'none' : '3 3', strokeWidth: 1 }),
-                  h('text', { x: leftX - 6, y: y + 3, textAnchor: 'end', fontSize: 9, fill: 'var(--dsw-alias-label-tertiary)' }, val + 'ms')
+                  h('text', { x: leftX - 6, y: y + 3, textAnchor: 'end', fontSize: 9, fill: 'var(--dsw-alias-label-tertiary)' }, val + (i === 4 && unit ? unit : ''))
                 );
               }),
               h('line', { x1: leftX, y1: baseY - plotH - 5, x2: leftX, y2: baseY, stroke: 'var(--dsw-alias-border-l4)', strokeWidth: 1.2 }),
               h('line', { x1: leftX, y1: baseY, x2: leftX + plotW + 10, y2: baseY, stroke: 'var(--dsw-alias-border-l4)', strokeWidth: 1.2 }),
-              [0, 1000, 2000, 3000, 4000].map((tVal, ti) => {
-                const tx = leftX + (tVal / 4000) * plotW;
+              [0, 0.25, 0.5, 0.75, 1].map((ratio, ti) => {
+                const tVal = Math.round(ratio * maxX);
+                const tx = leftX + ratio * plotW;
                 return h('g', { key: ti },
                   h('line', { x1: tx, y1: baseY, x2: tx, y2: baseY + 4, stroke: 'var(--dsw-alias-border-l4)' }),
-                  h('text', { x: tx, y: baseY + 16, textAnchor: 'middle', fontSize: 9, fill: 'var(--dsw-alias-label-secondary)' }, tVal === 0 ? '0' : (tVal / 1000) + 'k')
+                  h('text', { x: tx, y: baseY + 16, textAnchor: 'middle', fontSize: 9, fill: 'var(--dsw-alias-label-secondary)' }, tVal)
                 );
               }),
-              h('text', { x: leftX + plotW, y: baseY + 30, textAnchor: 'end', fontSize: 9, fill: 'var(--dsw-alias-label-tertiary)' }, '横坐标: Prompt 规模 (Tokens)'),
+              xAxisTitle && h('text', { x: leftX + plotW, y: baseY + 30, textAnchor: 'end', fontSize: 9, fill: 'var(--dsw-alias-label-tertiary)' }, xAxisTitle),
               pts.map((p, idx) => {
-                const cx = leftX + (p.x / 4000) * plotW;
-                const cy = baseY - (p.y / 160) * plotH;
+                const cx = leftX + ((p.x || 0) / maxX) * plotW;
+                const cy = baseY - ((p.y || 0) / maxY) * plotH;
                 return h('circle', {
                   key: idx,
                   cx,
                   cy,
                   r: 4.5,
-                  fill: 'var(--dsw-alias-brand-primary,#3b82f6)',
+                  fill: p.color || 'var(--dsw-alias-brand-primary,#3b82f6)',
                   stroke: 'var(--dsw-alias-bg-layer-2)',
                   strokeWidth: 1.5,
-                });
+                  style: { cursor: 'pointer' }
+                },
+                  h('title', null, p.label ? `${p.label}: (${p.x}, ${p.y})` : `(${p.x}, ${p.y})`)
+                );
               })
             )
           );
         }
 
-        // 7. Heatmap (Professional Thermal Gradient Matrix with Day & Hour Axes)
+        // 7. Heatmap
         if (chartType === 'heatmap') {
           return h(HeatmapChart, {
             title: props.title,
+            description: props.description,
             dataset: props.dataset,
+            xLabels: props.xLabels,
+            yLabels: props.yLabels,
+            summary: props.summary,
+            context
           });
         }
 
@@ -3628,54 +3788,42 @@ window.__ModuleLoader__.load({
           const nextOrder = sortKey === key && sortOrder === 'asc' ? 'desc' : 'asc';
           setSortKey(key);
           setSortOrder(nextOrder);
-          if (context?.dispatchEvent) {
-            context.dispatchEvent('sort', { column: key, order: nextOrder }, 'local');
-          }
         };
+
+        const maxHeight = props.maxHeight || (rawRows.length > 8 ? '420px' : 'auto');
 
         return h('div', {
           className: 'dgen-table-wrap',
-          style: {
-            width: '100%',
-            overflowX: 'auto',
-            border: '1px solid var(--dsw-alias-border-l4, #e2e8f0)',
-            borderRadius: '10px',
-            background: 'var(--dsw-alias-bg-layer-2, #ffffff)'
-          }
+          style: { maxHeight }
         },
-          (props.title || props.header) && h('div', {
+          props.title && h('div', {
             style: {
               padding: '10px 14px',
-              fontWeight: 650,
-              fontSize: '13.5px',
-              color: 'var(--dsw-alias-label-primary)',
               borderBottom: '1px solid var(--dsw-alias-border-l4)',
-              background: 'color-mix(in srgb, var(--dsw-alias-bg-layer-1) 50%, transparent)'
+              background: 'color-mix(in srgb, var(--dsw-alias-bg-layer-1) 40%, transparent)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
             }
-          }, props.title || props.header),
-          h('table', {
-            className: 'dgen-table',
-            style: { width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }
           },
+            h('span', { style: { fontWeight: 650, fontSize: '13px', color: 'var(--dsw-alias-label-primary)' } }, props.title),
+            h('span', { style: { fontSize: '11px', color: 'var(--dsw-alias-label-secondary)' } }, `共 ${rawRows.length} 条记录`)
+          ),
+          h('table', { className: 'dgen-table' },
             h('thead', null,
               h('tr', null,
                 normalizedColumns.map((c) =>
                   h('th', {
                     key: c.key,
                     style: {
-                      padding: '10px 14px',
-                      background: 'color-mix(in srgb, var(--dsw-alias-bg-layer-1) 55%, transparent)',
-                      fontWeight: 650,
-                      color: 'var(--dsw-alias-label-secondary)',
-                      cursor: 'pointer',
-                      borderBottom: '1px solid var(--dsw-alias-border-l4)',
                       textAlign: c.align || 'left',
                       width: c.width
                     },
-                    onClick: () => handleSort(c.key)
+                    onClick: () => handleSort(c.key),
+                    title: '点击切换升序/降序'
                   },
                     c.label,
-                    sortKey === c.key ? (sortOrder === 'asc' ? ' ↑' : ' ↓') : ''
+                    sortKey === c.key ? (sortOrder === 'asc' ? ' ▲' : ' ▼') : ''
                   )
                 )
               )
@@ -3703,11 +3851,20 @@ window.__ModuleLoader__.load({
                 h('tr', null,
                   h('td', {
                     colSpan: Math.max(normalizedColumns.length, 1),
-                    style: { textAlign: 'center', padding: '24px', color: 'var(--dsw-alias-label-tertiary)', fontSize: '13px' }
-                  }, '暂无数据行')
+                    style: { textAlign: 'center', padding: '36px 14px', color: 'var(--dsw-alias-label-tertiary)', fontSize: '12px' }
+                  },
+                    h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' } },
+                      h('span', { style: { fontSize: '24px' } }, '📄'),
+                      h('span', null, props.emptyText || '暂无数据行记录')
+                    )
+                  )
                 )
               )
             )
+          ),
+          sortedRows.length > 0 && h('div', { className: 'dgen-table-footer' },
+            h('span', null, sortKey ? `按 ${sortKey} (${sortOrder === 'asc' ? '升序' : '降序'}) 排序` : '默认顺序'),
+            h('span', null, `显示 1-${sortedRows.length} 条，共 ${rawRows.length} 条`)
           )
         );
       },
@@ -3727,9 +3884,13 @@ window.__ModuleLoader__.load({
 
         return h('form', { className: 'dgen-business-card dgen-form', onSubmit: handleSubmit },
           props.title && h('h3', { className: 'dgen-node-title' }, props.title),
+          props.description && h('p', { className: 'dgen-node-desc', style: { margin: '0 0 8px' } }, props.description),
           fields.map((f) => {
             return h('div', { key: f.name, className: 'dgen-form-group' },
-              h('label', { className: 'dgen-form-label' }, f.label || f.name),
+              h('label', { className: 'dgen-form-label', style: { display: 'flex', alignItems: 'center', gap: '4px' } },
+                f.label || f.name,
+                f.required && h('span', { style: { color: 'var(--dsw-alias-status-danger,#ef4444)' } }, '*')
+              ),
               f.type === 'select'
                 ? h('select', {
                     className: 'dgen-form-input',
@@ -3739,7 +3900,7 @@ window.__ModuleLoader__.load({
                   (f.options || []).map((opt) => h('option', { key: opt.value, value: opt.value }, opt.label))
                 )
                 : f.type === 'radio'
-                ? h('div', { style: { display: 'flex', gap: '14px', marginTop: '4px' } },
+                ? h('div', { style: { display: 'flex', gap: '14px', marginTop: '4px', flexWrap: 'wrap' } },
                     (f.options || []).map((opt) =>
                       h('label', { key: opt.value, style: { fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' } },
                         h('input', {
@@ -3754,19 +3915,26 @@ window.__ModuleLoader__.load({
                     )
                   )
                 : h('input', {
-                    type: 'text',
+                    type: f.type === 'number' ? 'number' : (f.type === 'password' ? 'password' : 'text'),
                     className: 'dgen-form-input',
                     placeholder: f.placeholder || '',
                     value: formData[f.name] || '',
                     onChange: (e) => handleChange(f.name, e.target.value),
-                  })
+                  }),
+              f.error && h('div', { className: 'dgen-form-error' }, '⚠ ' + f.error)
             );
           }),
-          h('button', {
-            type: 'submit',
-            className: 'dgen-btn-primary',
-            style: { alignSelf: 'flex-start', marginTop: '8px' },
-          }, props.submitText || '提交')
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' } },
+            h('button', {
+              type: 'submit',
+              className: 'dgen-btn-primary',
+            }, props.submitText || '提交保存'),
+            props.resetText && h('button', {
+              type: 'button',
+              className: 'dgen-btn-secondary',
+              onClick: () => setFormData({})
+            }, props.resetText)
+          )
         );
       },
 
@@ -3789,8 +3957,11 @@ window.__ModuleLoader__.load({
 
         return h('div', { className: 'dgen-task-card' },
           h('div', { className: 'dgen-node-card-head' },
-            h('h3', { className: 'dgen-node-title' }, 'Agent 任务执行进展'),
-            h('span', { className: 'dgen-version-badge' }, `${percent}% 完成`)
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+              h('h3', { className: 'dgen-node-title' }, props.title || 'Agent 任务执行进展'),
+              props.subtitle && h('span', { style: { fontSize: '11px', color: 'var(--dsw-alias-label-secondary)' } }, props.subtitle)
+            ),
+            h('span', { className: 'dgen-version-badge' }, `${percent}% 完成 (${completedCount}/${items.length})`)
           ),
           h('div', { style: { width: '100%', height: '5px', background: 'color-mix(in srgb, var(--dsw-alias-border-l4) 50%, transparent)', borderRadius: '3px', overflow: 'hidden' } },
             h('div', { style: { width: `${percent}%`, height: '100%', background: '#38a169', transition: 'width .2s ease' } })
@@ -3801,14 +3972,19 @@ window.__ModuleLoader__.load({
                 key: it.id,
                 className: 'dgen-task-item',
                 style: { cursor: 'pointer' },
-                onClick: () => context.dispatchEvent('task_inspect', { stepId: it.id, status: it.status }, 'local'),
+                onClick: () => context.dispatchEvent('task_inspect', { stepId: it.id, status: it.status, label: it.label }, 'local'),
               },
                 h('span', { className: `dgen-task-dot dgen-task-${it.status || 'pending'}` }),
-                h('div', { style: { display: 'flex', flexDirection: 'column', flex: 1 } },
-                  h('span', { style: { fontSize: '12px', fontWeight: 600, color: 'var(--dsw-alias-label-primary)' } }, it.label),
-                  it.details && h('span', { style: { fontSize: '11px', color: 'var(--dsw-alias-label-secondary)' } }, it.details)
+                h('div', { style: { display: 'flex', flexDirection: 'column', flex: 1, gap: '2px' } },
+                  h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                    h('span', { style: { fontSize: '12px', fontWeight: 650, color: 'var(--dsw-alias-label-primary)' } }, it.label || it.title),
+                    it.duration && h('span', { className: 'dgen-task-duration' }, it.duration)
+                  ),
+                  (it.details || it.description) && h('span', { style: { fontSize: '11px', color: 'var(--dsw-alias-label-secondary)', lineHeight: 1.4 } }, it.details || it.description)
                 ),
-                h('span', { style: { fontSize: '11px', textTransform: 'capitalize', fontWeight: 600, color: 'var(--dsw-alias-label-secondary)' } }, it.status)
+                h('span', { style: { fontSize: '11px', textTransform: 'capitalize', fontWeight: 600, color: it.status === 'completed' ? '#38a169' : (it.status === 'running' ? 'var(--dsw-alias-brand-primary,#3b82f6)' : (it.status === 'failed' ? '#e53e3e' : 'var(--dsw-alias-label-secondary)')) } },
+                  it.status === 'completed' ? '✓ 完成' : (it.status === 'running' ? '● 进行中' : (it.status === 'failed' ? '✕ 失败' : '○ 待就绪'))
+                )
               )
             )
           )
@@ -3910,11 +4086,13 @@ window.__ModuleLoader__.load({
       },
 
       stack(props, context) {
+        const noDiv = props.divider === false || props.noDivider === true;
         return h('div', {
+          className: noDiv ? 'dgen-layout-stack-nodiv' : '',
           style: {
             display: 'flex',
             flexDirection: props.direction === 'horizontal' ? 'row' : 'column',
-            gap: props.gap || '10px',
+            gap: props.gap || '12px',
             alignItems: props.align || 'stretch',
             justifyContent: props.justify || 'flex-start',
             width: '100%'
