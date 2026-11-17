@@ -39,7 +39,7 @@ window.__ModuleLoader__.load({
     const DEFAULT_CONFIG = {
       chatInPlaceEnabled: true,
       autoRepairEnabled: true,
-      maxRepairAttempts: 2,
+      maxRepairAttempts: 3,
       strictMode: false,
       maxNodesLimit: 50,
       maxDslBytes: 128 * 1024,
@@ -47,6 +47,10 @@ window.__ModuleLoader__.load({
       actionAllowlistCheck: true,
       enableVisualEngines: true,
       logEvents: true,
+      modelInputValidation: true,
+      modelRetryEnabled: true,
+      autoTriggerModelRetry: true,
+      autoRetryDelayMs: 1500,
     };
 
     /** English strings */
@@ -387,6 +391,27 @@ window.__ModuleLoader__.load({
       '.dgen-skeleton-card{background:var(--dsw-alias-bg-layer-2,#ffffff);border:1px dashed color-mix(in srgb,var(--dsw-alias-brand-primary,#3b82f6) 38%,var(--dsw-alias-border-l3,#cbd5e1))!important;box-shadow:0 4px 16px rgba(59,130,246,0.06)!important}',
       '.dgen-skeleton-box{background:linear-gradient(90deg,color-mix(in srgb,var(--dsw-alias-bg-layer-1,#f1f5f9) 92%,var(--dsw-alias-border-l3,#cbd5e1)) 25%,color-mix(in srgb,var(--dsw-alias-brand-primary,#3b82f6) 12%,var(--dsw-alias-bg-layer-2,#ffffff)) 45%,color-mix(in srgb,var(--dsw-alias-bg-layer-1,#f1f5f9) 92%,var(--dsw-alias-border-l3,#cbd5e1)) 65%);background-size:200% 100%;animation:dgen-skeleton-shimmer 1.8s ease-in-out infinite;border-radius:var(--dsw-radius-sm,4px)}',
       '.dgen-skeleton-dot{width:8px;height:8px;border-radius:50%;background:var(--dsw-alias-brand-primary,#3b82f6);box-shadow:0 0 8px var(--dsw-alias-brand-primary,#3b82f6);animation:dgen-pulse-dot 1.2s ease-in-out infinite;flex-shrink:0}',
+
+      /* --- Model Input Validation & Bounded Retry Card Styles --- */
+      '.dgen-chat-retry-wrap{margin:10px 0;width:100%;box-sizing:border-box;background:var(--dsw-alias-bg-layer-2,#ffffff);border:1px solid color-mix(in srgb,#f59e0b 45%,var(--dsw-alias-border-l4,#e2e8f0));border-radius:12px;padding:16px 18px;box-shadow:0 2px 8px rgba(245,158,11,0.08)}',
+      '.dgen-chat-retry-wrap.dgen-retry-exhausted{border-color:color-mix(in srgb,#ef4444 55%,var(--dsw-alias-border-l4,#e2e8f0));box-shadow:0 2px 8px rgba(239,68,68,0.08)}',
+      '.dgen-retry-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--dsw-alias-border-l4,#e2e8f0)}',
+      '.dgen-retry-title-row{display:flex;align-items:center;gap:8px}',
+      '.dgen-retry-title{margin:0;font-size:14px;font-weight:650;color:var(--dsw-alias-label-primary,#0f172a)}',
+      '.dgen-retry-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,#f59e0b 16%,transparent);color:#d97706;border:1px solid color-mix(in srgb,#f59e0b 35%,transparent)}',
+      '.dgen-retry-badge-exhausted{background:color-mix(in srgb,#ef4444 14%,transparent);color:#ef4444;border-color:color-mix(in srgb,#ef4444 35%,transparent)}',
+      '.dgen-retry-error-box{background:color-mix(in srgb,#ef4444 6%,var(--dsw-alias-bg-layer-1,#f8fafc));border:1px solid color-mix(in srgb,#ef4444 20%,transparent);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--dsw-alias-label-primary,#0f172a);line-height:1.5}',
+      '.dgen-retry-error-text{font-weight:600;color:#dc2626;margin-bottom:4px}',
+      '.dgen-retry-error-meta{color:var(--dsw-alias-label-secondary,#64748b);font-size:11px}',
+      '.dgen-retry-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}',
+      '.dgen-retry-btn-primary{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:6px;background:var(--dsw-alias-brand-primary,#3b82f6);color:#ffffff;border:none;font-size:12px;font-weight:550;cursor:pointer;transition:opacity .15s ease,transform .1s ease}',
+      '.dgen-retry-btn-primary:hover{opacity:0.92;transform:translateY(-1px)}',
+      '.dgen-retry-btn-secondary{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:6px;background:var(--dsw-alias-bg-layer-1,#f1f5f9);color:var(--dsw-alias-label-primary,#0f172a);border:1px solid var(--dsw-alias-border-l4,#cbd5e1);font-size:12px;cursor:pointer;transition:background .15s ease}',
+      '.dgen-retry-btn-secondary:hover{background:color-mix(in srgb,var(--dsw-alias-brand-primary,#3b82f6) 10%,var(--dsw-alias-bg-layer-1,#f1f5f9))}',
+      '.dgen-retry-status-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dsw-alias-label-secondary,#64748b);margin-bottom:10px}',
+      '.dgen-retry-progress-bar{width:100%;height:3px;background:color-mix(in srgb,#f59e0b 20%,transparent);border-radius:999px;overflow:hidden;margin-bottom:12px}',
+      '.dgen-retry-progress-inner{height:100%;background:#f59e0b;transition:width 1s linear}',
+      '.dgen-retry-raw-box{margin-top:12px;padding:10px 12px;border-radius:6px;background:var(--dsw-alias-bg-layer-1,#0f172a);color:var(--dsw-alias-label-secondary,#94a3b8);font-family:monospace;font-size:11px;max-height:180px;overflow:auto;white-space:pre-wrap;word-break:break-all;border:1px solid var(--dsw-alias-border-l4,#334155)}',
 
     ].join('');
 
@@ -1331,74 +1356,372 @@ window.__ModuleLoader__.load({
       }
     ];
 
-    /** Parser & Normalizer with Deterministic Repair (Section 7.2) */
-    function parseAndNormalizeDSL(rawText, config) {
-      const repairs = [];
-      let parsed;
+    /**
+     * Lenient JSON Pre-Repair & Sanitization (Section 7.2)
+     * Deterministically fixes mild LLM hallucinations (trailing commas, Python literals, unquoted keys, markdown wrappers)
+     * so that parsing succeeds without wasting LLM retry turns.
+     */
+    function tryRepairJson(raw) {
+      if (typeof raw !== 'string') return raw;
+      let text = raw.trim();
 
-      try {
-        parsed = JSON.parse(rawText);
-      } catch (err) {
+      // 1. Strip markdown code block wrapper if embedded inside
+      if (text.startsWith('```')) {
+        text = text.replace(/^```[a-zA-Z0-9_-]*\r?\n/, '').replace(/\r?\n```\s*$/, '').trim();
+      }
+
+      // 2. Normalize smart/curly quotes
+      text = text.replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'");
+
+      // 3. Replace Python constants
+      text = text.replace(/\bTrue\b/g, 'true')
+                 .replace(/\bFalse\b/g, 'false')
+                 .replace(/\bNone\b/g, 'null');
+
+      // 4. Remove comments (single line // and multi line /* ... */)
+      text = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^\\:])\/\/.*$/gm, '$1');
+
+      // 5. Remove trailing commas before } or ]
+      text = text.replace(/,(\s*[}\]])/g, '$1');
+
+      // 6. Fix common unquoted object keys: { protocol: "agent-genui" }
+      text = text.replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$-]*)\s*:/g, '$1"$2":');
+
+      // 7. Balance unclosed brackets if truncated
+      let openBraces = 0;
+      let openBrackets = 0;
+      let inString = false;
+      let escape = false;
+
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (escape) {
+          escape = false;
+          continue;
+        }
+        if (ch === '\\') {
+          escape = true;
+          continue;
+        }
+        if (ch === '"') {
+          inString = !inString;
+          continue;
+        }
+        if (!inString) {
+          if (ch === '{') openBraces++;
+          else if (ch === '}') openBraces = Math.max(0, openBraces - 1);
+          else if (ch === '[') openBrackets++;
+          else if (ch === ']') openBrackets = Math.max(0, openBrackets - 1);
+        }
+      }
+
+      if (openBrackets > 0) {
+        text += ']'.repeat(openBrackets);
+      }
+      if (openBraces > 0) {
+        text += '}'.repeat(openBraces);
+      }
+
+      return text;
+    }
+
+    /**
+     * Multi-Layer Model Input Validator & Normalizer (Section 7.1 & 7.2)
+     * Performs comprehensive validation from byte limits to JSON syntax, protocol schema, and component contracts.
+     */
+    function validateModelInput(rawText, config = DEFAULT_CONFIG) {
+      const cfg = { ...DEFAULT_CONFIG, ...(config || {}) };
+      const repairs = [];
+
+      if (!rawText || typeof rawText !== 'string' || !rawText.trim()) {
         return {
           valid: false,
-          error: 'JSON 语法解析错误: ' + err.message,
+          errorType: 'EMPTY_INPUT',
+          error: '模型输入内容为空，未检测到有效 DSL 数据',
+          path: 'root',
           dsl: null,
           repairs: [],
         };
       }
 
-      if (typeof parsed !== 'object' || parsed === null) {
-        return { valid: false, error: 'DSL 顶层必须为 Object', dsl: null, repairs: [] };
+      // Check payload size
+      if (rawText.length > (cfg.maxDslBytes || 128 * 1024)) {
+        return {
+          valid: false,
+          errorType: 'PAYLOAD_OVERFLOW',
+          error: `模型输入数据体积 (${Math.round(rawText.length / 1024)}KB) 超过安全配额限制 (${Math.round((cfg.maxDslBytes || 128 * 1024) / 1024)}KB)`,
+          path: 'root',
+          dsl: null,
+          repairs: [],
+        };
       }
 
-      // Root Normalization
-      if (!parsed.protocol) {
-        parsed.protocol = 'agent-genui';
-        repairs.push('补充缺失的根字段: protocol="agent-genui"');
+      let parsed = null;
+      let parseErr = null;
+
+      // 1. Direct JSON parse
+      try {
+        parsed = JSON.parse(rawText);
+      } catch (err) {
+        parseErr = err;
       }
+
+      // 2. Lenient repair if direct parse failed
+      if (!parsed && cfg.autoRepairEnabled !== false) {
+        try {
+          const repaired = tryRepairJson(rawText);
+          parsed = JSON.parse(repaired);
+          repairs.push('自动清洗修复了非标准 JSON 语法（引号/尾随逗号/格式闭合）');
+        } catch (_) {}
+      }
+
+      if (!parsed) {
+        return {
+          valid: false,
+          errorType: 'JSON_SYNTAX_ERROR',
+          error: 'JSON 语法解析错误: ' + (parseErr ? parseErr.message : '无法解析为合法的 JSON 对象'),
+          path: 'JSON 语法',
+          dsl: null,
+          repairs,
+        };
+      }
+
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        return {
+          valid: false,
+          errorType: 'INVALID_ROOT_TYPE',
+          error: 'DSL 顶层必须为一个 Object 对象，而非 Array 或基本类型',
+          path: 'root',
+          dsl: null,
+          repairs,
+        };
+      }
+
+      // Root protocol validation
+      if (!parsed.protocol) {
+        if (cfg.autoRepairEnabled !== false) {
+          parsed.protocol = 'agent-genui';
+          repairs.push('补充缺失的根协议字段: protocol="agent-genui"');
+        } else {
+          return {
+            valid: false,
+            errorType: 'MISSING_PROTOCOL',
+            error: '缺少必填协议标识字段: protocol (应为 "agent-genui")',
+            path: 'root.protocol',
+            dsl: null,
+            repairs,
+          };
+        }
+      } else if (parsed.protocol !== 'agent-genui') {
+        return {
+          valid: false,
+          errorType: 'UNSUPPORTED_PROTOCOL',
+          error: `不支持的协议标识: "${parsed.protocol}"，必须为 "agent-genui"`,
+          path: 'root.protocol',
+          dsl: null,
+          repairs,
+        };
+      }
+
+      // Version validation
       if (!parsed.version) {
         parsed.version = '1.0';
-        repairs.push('补充缺失的根版本: version="1.0"');
+        repairs.push('补充缺失的根版本号: version="1.0"');
+      } else if (parsed.version !== '1.0') {
+        if (cfg.strictMode) {
+          return {
+            valid: false,
+            errorType: 'UNSUPPORTED_VERSION',
+            error: `协议版本 "${parsed.version}" 暂不支持，当前仅支持 "1.0"`,
+            path: 'root.version',
+            dsl: null,
+            repairs,
+          };
+        } else {
+          parsed.version = '1.0';
+          repairs.push(`已自动将版本 ${parsed.version} 降级兼容为 1.0`);
+        }
       }
+
+      // ID validation
       if (!parsed.id) {
         parsed.id = 'ui_' + Math.random().toString(36).substring(2, 9);
-        repairs.push('生成稳定的根实例 ID: ' + parsed.id);
+        repairs.push('自动生成全局根 ID: ' + parsed.id);
       }
+
+      // Layout validation
       if (!parsed.layout || typeof parsed.layout !== 'object') {
         parsed.layout = { type: 'stack', gap: 'md' };
-        repairs.push('补齐缺失的根布局: { type: "stack", gap: "md" }');
-      } else if (!parsed.layout.gap) {
-        parsed.layout.gap = 'md';
-        repairs.push('补充默认布局间距: gap="md"');
+        repairs.push('补齐默认根布局: { type: "stack", gap: "md" }');
+      } else {
+        if (!parsed.layout.type) {
+          parsed.layout.type = 'stack';
+        }
+        if (!parsed.layout.gap) {
+          parsed.layout.gap = 'md';
+        }
       }
 
-      // Children normalization
+      // Children validation
+      if (!parsed.children) {
+        return {
+          valid: false,
+          errorType: 'MISSING_CHILDREN',
+          error: '缺失关键字段 children (组件节点列表)',
+          path: 'root.children',
+          dsl: null,
+          repairs,
+        };
+      }
+
       if (!Array.isArray(parsed.children)) {
-        if (parsed.children) {
+        if (typeof parsed.children === 'object' && parsed.children !== null) {
           parsed.children = [parsed.children];
-          repairs.push('将单个 child 规范化封装为 children 数组');
+          repairs.push('将单个 child 对象自动转换为 children 数组');
         } else {
-          parsed.children = [];
-          repairs.push('初始化空的 children 数组');
+          return {
+            valid: false,
+            errorType: 'INVALID_CHILDREN_TYPE',
+            error: 'children 字段必须为包含组件节点的 Array 数组',
+            path: 'root.children',
+            dsl: null,
+            repairs,
+          };
         }
       }
 
-      parsed.children = parsed.children.map((child, idx) => {
-        if (typeof child !== 'object' || child === null) return child;
-        const normalized = { ...child };
-        if (!normalized.id) {
-          normalized.id = 'node_' + idx + '_' + Math.random().toString(36).substring(2, 6);
-          repairs.push(`节点 #${idx} 自动分配稳定 ID: ${normalized.id}`);
+      if (parsed.children.length === 0) {
+        return {
+          valid: false,
+          errorType: 'EMPTY_CHILDREN',
+          error: 'children 节点数组为空，没有可呈现的组件内容',
+          path: 'root.children',
+          dsl: null,
+          repairs,
+        };
+      }
+
+      if (parsed.children.length > (cfg.maxNodesLimit || 50)) {
+        return {
+          valid: false,
+          errorType: 'NODE_LIMIT_EXCEEDED',
+          error: `组件节点数量 (${parsed.children.length}) 超过安全配额限制 (${cfg.maxNodesLimit || 50})`,
+          path: 'root.children',
+          dsl: null,
+          repairs,
+        };
+      }
+
+      // Registered component types (Full 7-dimensional coverage)
+      const registeredTypes = [
+        'card', 'metric', 'code', 'chart', 'diagram', 'table', 'form', 'comparison', 'taskPlan',
+        'callout', 'text', 'markdown', 'list', 'badge', 'accordion', 'grid', 'stack', 'split',
+        'container', 'button', 'input', 'select', 'switch', 'slider', 'datePicker', 'diffViewer',
+        'diff', 'jsonViewer', 'treeView', 'terminal', 'image', 'imageGallery', 'audio', 'video', 'approval'
+      ];
+      const seenIds = new Set();
+
+      for (let idx = 0; idx < parsed.children.length; idx++) {
+        const child = parsed.children[idx];
+        const path = `children[${idx}]`;
+
+        if (!child || typeof child !== 'object') {
+          return {
+            valid: false,
+            errorType: 'INVALID_NODE',
+            error: `节点 #${idx} 结构非法，必须为 Object 对象`,
+            path,
+            dsl: null,
+            repairs,
+          };
         }
-        if (!normalized.version) {
-          normalized.version = '1';
+
+        if (!child.id) {
+          child.id = 'node_' + idx + '_' + Math.random().toString(36).substring(2, 6);
+          repairs.push(`节点 #${idx} 自动分配稳定 ID: ${child.id}`);
+        } else {
+          if (seenIds.has(child.id)) {
+            if (cfg.strictMode) {
+              return {
+                valid: false,
+                errorType: 'DUPLICATE_NODE_ID',
+                error: `节点 ID 重复冲突: "${child.id}"，每个节点 id 必须全局唯一`,
+                path: `${path}.id`,
+                dsl: null,
+                repairs,
+              };
+            } else {
+              child.id = `${child.id}_${idx}`;
+              repairs.push(`节点 #${idx} 重复 ID 自动重命名为: ${child.id}`);
+            }
+          }
+          seenIds.add(child.id);
         }
-        if (!normalized.props || typeof normalized.props !== 'object') {
-          normalized.props = {};
-          repairs.push(`节点 #${idx} (${normalized.type || 'unknown'}) 初始化 props 对象`);
+
+        if (!child.version) {
+          child.version = '1';
         }
-        return normalized;
-      });
+
+        if (!child.type) {
+          return {
+            valid: false,
+            errorType: 'MISSING_NODE_TYPE',
+            error: `节点 #${idx} (ID: ${child.id}) 缺少必填组件类型 type`,
+            path: `${path}.type`,
+            dsl: null,
+            repairs,
+          };
+        }
+
+        if (!registeredTypes.includes(child.type)) {
+          if (cfg.strictMode) {
+            return {
+              valid: false,
+              errorType: 'UNKNOWN_COMPONENT_TYPE',
+              error: `未知组件类型 "${child.type}"，系统未注册该组件`,
+              path: `${path}.type`,
+              dsl: null,
+              repairs,
+            };
+          } else {
+            child.fallbackType = child.type;
+            child.type = 'card';
+            repairs.push(`未知组件类型 ${child.fallbackType} 自动降级为 card 展示`);
+          }
+        }
+
+        if (!child.props || typeof child.props !== 'object') {
+          child.props = {};
+          repairs.push(`节点 #${idx} (${child.type}) 初始化 props 属性对象`);
+        }
+
+        // Component-specific contract checks
+        if (child.type === 'chart') {
+          if (!child.props.series && !child.props.data && !child.props.dataset) {
+            return {
+              valid: false,
+              errorType: 'CHART_MISSING_DATA',
+              error: `chart 组件 (${child.id}) 缺失必要的数据集配置 (props.series 或 props.data 数组)`,
+              path: `${path}.props.series`,
+              dsl: null,
+              repairs,
+            };
+          }
+        }
+
+        if (child.type === 'diagram') {
+          if (!child.props.dsl && !child.props.nodes && !child.props.code && !child.props.content && !child.props.diagramType) {
+            return {
+              valid: false,
+              errorType: 'DIAGRAM_MISSING_CONTENT',
+              error: `diagram 组件 (${child.id}) 缺失拓扑或图形描述 (props.dsl / props.nodes / props.diagramType)`,
+              path: `${path}.props.dsl`,
+              dsl: null,
+              repairs,
+            };
+          }
+        }
+      }
 
       return {
         valid: true,
@@ -1408,9 +1731,19 @@ window.__ModuleLoader__.load({
       };
     }
 
+    /** Parser & Normalizer with Deterministic Repair (Section 7.2) */
+    function parseAndNormalizeDSL(rawText, config) {
+      return validateModelInput(rawText, config);
+    }
+
     /** Multi-layer Validator (Section 7.1) */
     function validateDSL(dsl, config) {
+      const cfg = { ...DEFAULT_CONFIG, ...(config || {}) };
       const issues = [];
+
+      if (!dsl || typeof dsl !== 'object') {
+        return { valid: false, issues: [{ path: 'root', message: 'DSL 顶层必须为 Object' }] };
+      }
 
       // Layer 1 & 2: Root Schema
       if (dsl.protocol !== 'agent-genui') {
@@ -1419,15 +1752,20 @@ window.__ModuleLoader__.load({
       if (dsl.version !== '1.0') {
         issues.push({ path: 'version', message: '协议版本暂仅支持 1.0' });
       }
-      if (dsl.children.length > config.maxNodesLimit) {
-        issues.push({ path: 'children', message: `节点数 (${dsl.children.length}) 超过安全配额限制 (${config.maxNodesLimit})` });
+      if (Array.isArray(dsl.children) && dsl.children.length > cfg.maxNodesLimit) {
+        issues.push({ path: 'children', message: `节点数 (${dsl.children.length}) 超过安全配额限制 (${cfg.maxNodesLimit})` });
       }
 
       // Layer 3 & 4: Component Contracts & Semantics
-      const registeredTypes = ['card', 'metric', 'table', 'form', 'comparison', 'taskPlan', 'chart', 'diagram', 'code', 'callout', 'text', 'approval'];
+      const registeredTypes = [
+        'card', 'metric', 'code', 'chart', 'diagram', 'table', 'form', 'comparison', 'taskPlan',
+        'callout', 'text', 'markdown', 'list', 'badge', 'accordion', 'grid', 'stack', 'split',
+        'container', 'button', 'input', 'select', 'switch', 'slider', 'datePicker', 'diffViewer',
+        'diff', 'jsonViewer', 'treeView', 'terminal', 'image', 'imageGallery', 'audio', 'video', 'approval'
+      ];
       const seenIds = new Set();
 
-      dsl.children.forEach((child, index) => {
+      (dsl.children || []).forEach((child, index) => {
         const path = `children[${index}]`;
         if (!child.id) {
           issues.push({ path: `${path}.id`, message: '节点缺少必填标识 id' });
@@ -1441,13 +1779,13 @@ window.__ModuleLoader__.load({
         if (!child.type) {
           issues.push({ path: `${path}.type`, message: '节点缺少组件类型 type' });
         } else if (!registeredTypes.includes(child.type)) {
-          if (config.strictMode) {
+          if (cfg.strictMode) {
             issues.push({ path: `${path}.type`, message: `未知组件类型: ${child.type}` });
           }
         }
 
         // Action check
-        if (config.actionAllowlistCheck && child.props && child.props.submitAction) {
+        if (cfg.actionAllowlistCheck && child.props && child.props.submitAction) {
           if (typeof child.props.submitAction !== 'string' || !/^[a-zA-Z0-9._-]+$/.test(child.props.submitAction)) {
             issues.push({ path: `${path}.props.submitAction`, message: '动作 ID 格式不符合安全规范' });
           }
@@ -4345,12 +4683,372 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * Helper: Detect Conversation Retry Attempts from DOM History
+     * Checks if this block follows a previously dispatched retry prompt.
+     */
+    function detectConversationRetryAttempt(hostEl) {
+      if (!hostEl || typeof document === 'undefined') return 0;
+      try {
+        const attrCount = hostEl.getAttribute('data-dgen-retry-count');
+        if (attrCount !== null && attrCount !== undefined) {
+          return parseInt(attrCount, 10) || 0;
+        }
+
+        const allRetries = document.querySelectorAll('[data-dgen-retry-marker="true"]');
+        let count = 0;
+        allRetries.forEach((el) => {
+          if (el.compareDocumentPosition(hostEl) & Node.DOCUMENT_POSITION_FOLLOWING) {
+            count++;
+          }
+        });
+        if (count > 0) return Math.min(count, 3);
+
+        const messages = document.querySelectorAll('[data-role="user"], .user-message, [class*="userMessage"], [data-message-author="user"]');
+        let promptCount = 0;
+        messages.forEach((msg) => {
+          if ((msg.compareDocumentPosition(hostEl) & Node.DOCUMENT_POSITION_FOLLOWING) &&
+              msg.textContent && msg.textContent.includes('GenUI 模型输入校验失败')) {
+            promptCount++;
+          }
+        });
+        if (promptCount > 0) return Math.min(promptCount, 3);
+      } catch (_) {}
+      return 0;
+    }
+
+    /**
+     * Formats a structured model repair prompt for invalid GenUI DSL
+     */
+    function buildModelRepairPrompt({ error, errorType, path, repairs, attempt, rawCode }) {
+      const nextAttempt = attempt + 1;
+      const lines = [
+        `【GenUI 模型输入校验失败 - 请求重新生成 (第 ${nextAttempt} 次/共 3 次)】`,
+        `你刚才输出的 \`\`\`agent-genui\`\`\` 可视化组件数据未能通过系统的协议与输入校验，无法正常解析渲染：`,
+        `- 错误类型：${errorType || 'DATA_PARSE_ERROR'}`,
+        `- 错误详情：${error || 'JSON 数据无法解析或结构不符合协议规范'}`,
+      ];
+      if (path) {
+        lines.push(`- 错误定位：${path}`);
+      }
+      if (repairs && repairs.length > 0) {
+        lines.push(`- 自动自愈项：${repairs.join('；')}`);
+      }
+      lines.push(
+        ``,
+        `【格式规范与修复要求】：`,
+        `1. 必须输出完整闭合、可被 JSON.parse 解析的合法 JSON，严格包裹在 \`\`\`agent-genui 代码块中；`,
+        `2. 严禁出现未闭合大括号、多余的末尾逗号（如 {"a": 1,}）、单引号或未转义双引号；`,
+        `3. 顶层根对象必须完整包含 "protocol": "agent-genui", "version": "1.0", "id", "layout", "children"；`,
+        `4. children 数组中每个组件节点必须具备有效 id、合法 type 以及符合组件规范的 props 配置；`,
+        `5. 这是第 ${nextAttempt} 次重试（最多重试 3 次）。请针对上述报错精准修复，直接重新输出修正后的完整 \`\`\`agent-genui 代码块。`
+      );
+      return lines.join('\n');
+    }
+
+    /**
+     * Injects repair prompt into DSH Composer and triggers submit
+     */
+    function dispatchModelRetryPrompt(promptText, hostEl, nextAttempt) {
+      if (typeof document === 'undefined') return false;
+
+      if (hostEl) {
+        hostEl.setAttribute('data-dgen-retry-count', String(nextAttempt));
+        hostEl.setAttribute('data-dgen-retry-marker', 'true');
+      }
+
+      const candidates = [
+        document.querySelector('[data-composer-input="true"]'),
+        document.querySelector('[data-composer-input]'),
+        document.querySelector('[data-composer-card] [contenteditable="true"]'),
+        document.querySelector('div[role="textbox"][contenteditable="true"]'),
+        document.querySelector('[contenteditable="true"][role="textbox"]'),
+        document.querySelector('[contenteditable="true"]'),
+        document.querySelector('textarea:not([readonly]):not([class*="search"])'),
+      ].filter(Boolean);
+
+      const target = candidates[0];
+      if (!target) {
+        try {
+          if (navigator.clipboard) navigator.clipboard.writeText(promptText);
+        } catch (_) {}
+        return false;
+      }
+
+      target.focus();
+
+      let inserted = false;
+      try {
+        inserted = document.execCommand('insertText', false, promptText);
+      } catch (_) {}
+
+      if (!inserted) {
+        if (target.isContentEditable || target.getAttribute('contenteditable') === 'true') {
+          try {
+            const evt = new InputEvent('beforeinput', {
+              bubbles: true,
+              cancelable: true,
+              inputType: 'insertText',
+              data: promptText,
+            });
+            target.dispatchEvent(evt);
+            inserted = true;
+          } catch (_) {}
+          if (!inserted) {
+            target.textContent = promptText;
+            target.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        } else if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
+          const prev = target.value || '';
+          const start = target.selectionStart ?? prev.length;
+          const end = target.selectionEnd ?? prev.length;
+          target.value = prev.slice(0, start) + promptText + prev.slice(end);
+          target.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: promptText }));
+          target.dispatchEvent(new Event('change', { bubbles: true }));
+          inserted = true;
+        }
+      }
+
+      setTimeout(() => {
+        const sendBtn = document.querySelector(
+          '[data-composer-send="true"], button[aria-label*="发送"], button[aria-label*="Send"], button[title*="发送"], button[title*="Send"], button[type="submit"]'
+        ) || target.closest('form')?.querySelector('button[type="submit"]');
+
+        if (sendBtn && !sendBtn.disabled) {
+          sendBtn.click();
+        } else {
+          target.dispatchEvent(new KeyboardEvent('keydown', {
+            key: 'Enter',
+            code: 'Enter',
+            keyCode: 13,
+            which: 13,
+            bubbles: true,
+            cancelable: true,
+          }));
+        }
+      }, 120);
+
+      return true;
+    }
+
+    /**
+     * Component: ModelRetryCard (Interactive Model Repair & Bounded 3-Attempt Retry)
+     * Handles model input validation failures with deterministic diagnostics and 3-attempt bounded retry.
+     */
+    function ModelRetryCard({ rawCode, parseError, errorType, errorPath, repairs, hostPre, onOpenInPlayground }) {
+      const [attempt, setAttempt] = useState(() => detectConversationRetryAttempt(hostPre));
+      const [isRetrying, setIsRetrying] = useState(false);
+      const [countdown, setCountdown] = useState(2);
+      const [autoRetryPaused, setAutoRetryPaused] = useState(false);
+      const [showRaw, setShowRaw] = useState(false);
+      const [copied, setCopied] = useState(false);
+
+      const maxRetries = 3;
+      const isExhausted = attempt >= maxRetries;
+
+      // Auto retry countdown timer
+      useEffect(() => {
+        if (isExhausted || isRetrying || autoRetryPaused) return;
+
+        if (countdown > 0) {
+          const timer = setTimeout(() => {
+            setCountdown((c) => c - 1);
+          }, 1000);
+          return () => clearTimeout(timer);
+        } else if (countdown === 0) {
+          handleTriggerRetry();
+        }
+      }, [countdown, isExhausted, isRetrying, autoRetryPaused]);
+
+      const handleTriggerRetry = () => {
+        if (isRetrying || attempt >= maxRetries) return;
+        setIsRetrying(true);
+        const nextAttempt = attempt + 1;
+        setAttempt(nextAttempt);
+
+        const prompt = buildModelRepairPrompt({
+          error: parseError,
+          errorType,
+          path: errorPath,
+          repairs,
+          attempt,
+          rawCode,
+        });
+
+        const success = dispatchModelRetryPrompt(prompt, hostPre, nextAttempt);
+        if (!success) {
+          try {
+            navigator.clipboard?.writeText(prompt);
+          } catch (_) {}
+        }
+      };
+
+      const handleCopyPrompt = () => {
+        const prompt = buildModelRepairPrompt({
+          error: parseError,
+          errorType,
+          path: errorPath,
+          repairs,
+          attempt,
+          rawCode,
+        });
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(prompt).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          });
+        }
+      };
+
+      const handleResetAndRetry = () => {
+        setAttempt(0);
+        setIsRetrying(false);
+        setAutoRetryPaused(false);
+        setCountdown(2);
+        if (hostPre) {
+          hostPre.removeAttribute('data-dgen-retry-count');
+          hostPre.removeAttribute('data-dgen-retry-marker');
+        }
+      };
+
+      return h('div', {
+        className: `dgen-chat-retry-wrap ${isExhausted ? 'dgen-retry-exhausted' : ''}`,
+        style: {
+          margin: '8px 0',
+          width: '100%',
+          boxSizing: 'border-box'
+        }
+      },
+        // Header
+        h('div', { className: 'dgen-retry-head' },
+          h('div', { className: 'dgen-retry-title-row' },
+            h('span', { style: { fontSize: '16px' } }, isExhausted ? '❌' : '⚠️'),
+            h('h4', { className: 'dgen-retry-title' },
+              isExhausted ? '模型输入校验失败（已达最大重试上限）' : '模型输入数据校验未通过'
+            )
+          ),
+          h('span', {
+            className: `dgen-retry-badge ${isExhausted ? 'dgen-retry-badge-exhausted' : ''}`
+          },
+            isExhausted ? '重试熔断 (3/3)' : `重试进度: ${attempt + 1} / ${maxRetries} 次`
+          )
+        ),
+
+        // Error message box
+        h('div', { className: 'dgen-retry-error-box' },
+          h('div', { className: 'dgen-retry-error-text' },
+            `解析异常: ${parseError || 'DSL 数据格式不满足 agent-genui 协议规范'}`
+          ),
+          errorPath && h('div', { className: 'dgen-retry-error-meta' },
+            `问题路径: ${errorPath}`
+          ),
+          repairs && repairs.length > 0 && h('div', { className: 'dgen-retry-error-meta', style: { marginTop: '2px' } },
+            `自愈处理: ${repairs.join('；')}`
+          )
+        ),
+
+        // Retrying status indicator
+        isRetrying && h('div', { className: 'dgen-retry-status-row' },
+          h('div', { className: 'dgen-skeleton-dot' }),
+          h('span', null, `已向模型发送修复指令，等待模型重新输出合规数据 (第 ${attempt}/3 次)...`)
+        ),
+
+        // Auto retry countdown & progress bar
+        !isExhausted && !isRetrying && !autoRetryPaused && countdown > 0 && h('div', null,
+          h('div', { className: 'dgen-retry-status-row' },
+            h('span', null, `🤖 即将在 ${countdown} 秒后自动请求模型重新生成 (第 ${attempt + 1}/3 次)...`)
+          ),
+          h('div', { className: 'dgen-retry-progress-bar' },
+            h('div', {
+              className: 'dgen-retry-progress-inner',
+              style: { width: `${(countdown / 2) * 100}%` }
+            })
+          )
+        ),
+
+        // Explanations for exhausted state
+        isExhausted && h('p', {
+          style: {
+            fontSize: '12px',
+            color: 'var(--dsw-alias-label-secondary)',
+            margin: '0 0 12px',
+            lineHeight: 1.5
+          }
+        },
+          '已连续 3 次尝试让模型重试修复该输入数据，但模型生成的内容仍未能通过协议校验。为避免死循环消耗 Token，已终止自动重试。您可以展开查看原始数据排查问题，或手动重置后重新发起。'
+        ),
+
+        // Action Buttons Row
+        h('div', { className: 'dgen-retry-actions' },
+          !isExhausted && !isRetrying && h('button', {
+            type: 'button',
+            className: 'dgen-retry-btn-primary',
+            onClick: handleTriggerRetry,
+            title: `立即向模型发送重试提示词 (${maxRetries - attempt} 次机会剩余)`
+          },
+            '🚀 立即让模型重试',
+            h('span', { style: { opacity: 0.85, fontSize: '11px' } }, `(${maxRetries - attempt}次剩余)`)
+          ),
+
+          !isExhausted && !isRetrying && !autoRetryPaused && countdown > 0 && h('button', {
+            type: 'button',
+            className: 'dgen-retry-btn-secondary',
+            onClick: () => setAutoRetryPaused(true),
+            title: '暂停自动重试倒计时'
+          },
+            '⏸️ 暂停自动重试'
+          ),
+
+          isExhausted && h('button', {
+            type: 'button',
+            className: 'dgen-retry-btn-primary',
+            onClick: handleResetAndRetry,
+            title: '重置重试计数并重新发起'
+          },
+            '🔄 重置并重新发起'
+          ),
+
+          h('button', {
+            type: 'button',
+            className: 'dgen-retry-btn-secondary',
+            onClick: handleCopyPrompt,
+            title: '复制发送给模型的修复提示词'
+          },
+            copied ? '✅ 已复制修复指令' : '📋 复制修复指令'
+          ),
+
+          h('button', {
+            type: 'button',
+            className: 'dgen-retry-btn-secondary',
+            onClick: () => setShowRaw(!showRaw),
+            title: '查看模型输出的原始 DSL 代码'
+          },
+            showRaw ? '🔼 收起原始数据' : '💻 查看原始数据'
+          ),
+
+          onOpenInPlayground && h('button', {
+            type: 'button',
+            className: 'dgen-retry-btn-secondary',
+            onClick: () => onOpenInPlayground(rawCode),
+            title: '在 GenUI 工作台打开'
+          },
+            '🛠️ 工作台调试'
+          )
+        ),
+
+        // Collapsible raw code view
+        showRaw && h('div', { className: 'dgen-retry-raw-box' },
+          h('pre', { style: { margin: 0, font: 'inherit', whiteSpace: 'pre-wrap' } }, rawCode)
+        )
+      );
+    }
+
+    /**
      * Component: ChatGenuiCard (Pure, Borderless Native Component in Conversation Flow)
      * Renders pure components directly into the conversation flow without nested wrappers or debug buttons.
      */
-    function ChatGenuiCard({ rawCode, onOpenInPlayground }) {
+    function ChatGenuiCard({ rawCode, hostPre, onOpenInPlayground }) {
       const parsed = useMemo(() => {
-        return parseAndNormalizeDSL(rawCode, DEFAULT_CONFIG);
+        return validateModelInput(rawCode, DEFAULT_CONFIG);
       }, [rawCode]);
 
       const dsl = parsed.dsl;
@@ -4361,21 +5059,15 @@ window.__ModuleLoader__.load({
       }
 
       if (!parsed.valid || !dsl) {
-        return h('div', {
-          className: 'dgen-chat-error-box',
-          style: {
-            padding: '12px 14px',
-            borderRadius: '8px',
-            background: 'rgba(239,68,68,0.08)',
-            border: '1px solid rgba(239,68,68,0.2)',
-            color: '#ef4444',
-            fontSize: '12px',
-            margin: '8px 0'
-          }
-        },
-          h('div', { style: { fontWeight: 600 } }, '⚠️ GenUI DSL 解析错误：'),
-          h('div', { style: { marginTop: '4px', opacity: 0.9 } }, parsed.error || 'DSL 格式不满足规范')
-        );
+        return h(ModelRetryCard, {
+          rawCode,
+          parseError: parsed.error,
+          errorType: parsed.errorType,
+          errorPath: parsed.path,
+          repairs: parsed.repairs,
+          hostPre,
+          onOpenInPlayground,
+        });
       }
 
       // Render the GenUI tree DIRECTLY into the message stream without artificial wrappers or debug toolbars
@@ -4480,7 +5172,8 @@ window.__ModuleLoader__.load({
         hostEl.style.display = 'none';
         pre.style.display = 'none';
 
-        if (parsed) {
+        const isComplete = Boolean(parsed || raw.trim().endsWith('}') || raw.includes('```'));
+        if (isComplete) {
           pre.setAttribute('data-dgen-intercepted', 'ready');
         } else {
           pre.setAttribute('data-dgen-intercepted', 'streaming');
@@ -4488,6 +5181,7 @@ window.__ModuleLoader__.load({
 
         const Component = h(ChatGenuiCard, {
           rawCode: raw,
+          hostPre: pre,
           onOpenInPlayground: (targetDsl) => {
             window.__DSH_PENDING_GENUI_DSL__ = targetDsl;
             window.dispatchEvent(new CustomEvent('dsh-load-genui-dsl'));
@@ -4586,19 +5280,52 @@ window.__ModuleLoader__.load({
             )
           ),
 
+          // Model Input Validation & Bounded Retry
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--dsw-alias-border-l4)' } },
+            h('div', { style: { display: 'flex', flexDirection: 'column', gap: '2px' } },
+              h('span', { style: { fontSize: '13px', fontWeight: 600 } }, '模型输入校验与自动重试 (Model Input Validation & Retry)'),
+              h('span', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary)' } }, '模型输入数据无法解析或格式非法时，自动捕获错误并触发至多 3 次有界重试')
+            ),
+            h('label', { className: 'dgen-switch' },
+              h('input', {
+                type: 'checkbox',
+                checked: localConfig.modelRetryEnabled !== false,
+                onChange: (e) => updateField('modelRetryEnabled', e.target.checked),
+              }),
+              h('span', { className: 'dgen-slider' })
+            )
+          ),
+
           // Max Attempts
           h('div', { style: { display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--dsw-alias-border-l4)' } },
             h('div', { style: { display: 'flex', flexDirection: 'column', gap: '2px' } },
               h('span', { style: { fontSize: '13px', fontWeight: 600 } }, '模型有界重试上限 (Max Repair Attempts)'),
-              h('span', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary)' } }, '向模型请求修复失败片段的最大允许次数 (建议 1 ~ 2 次)')
+              h('span', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary)' } }, '向模型请求修复失败片段的最大允许次数 (默认 3 次)')
+            ),
+            h('input', {
+              type: 'number',
+              className: 'dgen-input-num',
+              min: 1,
+              max: 5,
+              value: localConfig.maxRepairAttempts || 3,
+              onChange: (e) => updateField('maxRepairAttempts', parseInt(e.target.value, 10) || 3),
+            })
+          ),
+
+          // Auto Retry Delay
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--dsw-alias-border-l4)' } },
+            h('div', { style: { display: 'flex', flexDirection: 'column', gap: '2px' } },
+              h('span', { style: { fontSize: '13px', fontWeight: 600 } }, '自动重试倒计时 (Auto Retry Delay)'),
+              h('span', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary)' } }, '解析失败后自动请求模型重新生成的缓冲倒计时（毫秒，默认 1500ms）')
             ),
             h('input', {
               type: 'number',
               className: 'dgen-input-num',
               min: 0,
-              max: 5,
-              value: localConfig.maxRepairAttempts,
-              onChange: (e) => updateField('maxRepairAttempts', parseInt(e.target.value, 10) || 0),
+              max: 10000,
+              step: 500,
+              value: typeof localConfig.autoRetryDelayMs === 'number' ? localConfig.autoRetryDelayMs : 1500,
+              onChange: (e) => updateField('autoRetryDelayMs', parseInt(e.target.value, 10) || 0),
             })
           ),
 
@@ -4911,7 +5638,7 @@ window.__ModuleLoader__.load({
         h('header', { className: 'dgen-head' },
           h('div', { className: 'dgen-title-row' },
             h('h1', { className: 'dgen-title' }, t('page.title')),
-            h('span', { className: 'dgen-version-badge' }, 'v1.0')
+            h('span', { className: 'dgen-version-badge' }, 'v1.0.4')
           ),
           h('p', { className: 'dgen-intro' }, t('page.description'))
         ),
